@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Expense Tracker</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        form {
+            display: grid;
+            gap: 10px;
+        }
+        label {
+            font-weight: bold;
+        }
+        input[type="text"], input[type="date"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .tab {
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background-color: #f1f1f1;
+            border-radius: 8px 8px 0 0;
+        }
+        .tab button {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
+            color: #333;
+        }
+        .tab button:hover {
+            background-color: #ddd;
+        }
+        .tab button.active {
+            background-color: #3498db;
+            color: white;
+        }
+        .tabcontent {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            animation: fadeEffect 1s;
+        }
+        @keyframes fadeEffect {
+            from {opacity: 0;}
+            to {opacity: 1;}
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Personal Expense Tracker</h1>
+    
+    <div class="tab">
+        <button class="tablinks" onclick="openTab(event, 'Add')" id="defaultOpen">Add Expense</button>
+        <button class="tablinks" onclick="openTab(event, 'Search')">Search</button>
+        <button class="tablinks" onclick="openTab(event, 'Update')">Update</button>
+        <button class="tablinks" onclick="openTab(event, 'Delete')">Delete</button>
+        <button class="tablinks" onclick="openTab(event, 'Analyze')">Analyze</button>
+    </div>
+
+    <div id="Add" class="tabcontent">
+        <div class="card">
+            <form action="/" method="POST">
+                <label for="date">Date:</label>
+                <input type="date" id="date" name="date" required>
+                
+                <label for="category">Category:</label>
+                <input type="text " id="category" name="category" required >
+                
+                <label for="amount">Amount:</label>
+                <input type="number" id="amount" name="amount" step="0.01" required>
+                
+                <label for="description">Description:</label>
+                <input type="text" id="description" name="description">
+                
+                <button type="submit">Add Expense</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="Search" class="tabcontent">
+        <div class="card">
+            <form action="/search" method="POST">
+                <label for="category">Search by Category:</label>
+                <input type="text" id="category" name="category">
+                
+                <button type="submit">Search</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="Update" class="tabcontent">
+        <div class="card">
+            <form action="/update" method="POST">
+                <label for="id">Update Amount by ID:</label>
+                <input type="text" id="id" name="id">
+                
+                <label for="newamount">New Amount:</label>
+                <input type="number" id="newamount" name="newamount" step="0.01">
+                
+                <button type="submit">Update</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="Delete" class="tabcontent">
+        <div class="card">
+            <form action="/delete" method="POST">
+                <label for="id">Delete by ID:</label>
+                <input type="text" id="id" name="id">
+                
+                <button type="submit">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="Analyze" class="tabcontent">
+        <div class="card">
+            <canvas id="expenseChart" width="400" height="200"></canvas>
+        </div>
+    </div>
+
+    <script>
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tablinks");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+
+        async function loadChartData() {
+            const response = await fetch('/expenses');
+            const expenses = await response.json();
+
+            const categories = {};
+            expenses.forEach(expense => {
+                const category = expense.category;
+                const amount = expense.amount;
+
+                if (categories[category]) {
+                    categories[category] += amount;
+                } else {
+                    categories[category] = amount;
+                }
+            });
+
+            const labels = Object.keys(categories);
+            const data = Object.values(categories);
+
+            const ctx = document.getElementById('expenseChart').getContext('2d');
+            const expenseChart = new Chart(ctx, {
+                type: 'bar', // You can change this to 'pie', 'line', etc.
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Expenses by Category',
+                        data: data,
+                        backgroundColor: 'rgba(52, 152, 219, 0.6)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        document.getElementById("defaultOpen").click(); // Open default tab
+        loadChartData(); // Load chart data when the page loads
+    </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operation Confirmed</title>
+    <style>
+        /* Add your styles here */
+    </style>
+</head>
+<body>
+    <h1>Operation Confirmed</h1>
+    <p id="message"></p>
+    <a href="/">Back to Home</a>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const message = params.get('message');
+        document.getElementById('message').innerText = message;
+    </script>
+</body>
+</html>
