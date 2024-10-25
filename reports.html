@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Report</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* Global Styles */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(to right, #f1f2f6, #dfe6e9);
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2d3436;
+            font-weight: 700;
+        }
+
+        /* Chart Section Styles */
+        .chart-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        canvas {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            max-width: 400px;
+            width: 100%;
+            height: 300px;
+        }
+
+        /* Comparison Table Styles */
+        .comparison-tables {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+
+        table {
+            width: 100%;
+            max-width: 400px;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #0984e3;
+            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        td {
+            background-color: #ecf0f1;
+        }
+
+        table caption {
+            font-weight: bold;
+            padding: 10px;
+            text-align: center;
+            color: #2d3436;
+            background-color: #74b9ff;
+            border-radius: 10px 10px 0 0;
+        }
+
+        /* Button Styles */
+        .download-btn {
+            padding: 12px 24px;
+            background-color: #00b894;
+            color: white;
+            text-decoration: none;
+            border-radius: 30px;
+            font-weight: bold;
+            display: inline-block;
+            margin: 0 auto;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: background 0.3s;
+        }
+
+        .download-btn:hover {
+            background-color: #019875;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #636e72;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Financial Report</h1>
+
+    <!-- Chart Section -->
+    <div class="chart-container">
+        <canvas id="incomeChart"></canvas>
+        <canvas id="expenseChart"></canvas>
+    </div>
+
+    <!-- Comparison Tables Section -->
+    <div class="comparison-tables">
+        <!-- Income Table -->
+        <table id="income-table">
+            <caption>Income Breakdown</caption>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <!-- Expense Table -->
+        <table id="expense-table">
+            <caption>Expense Breakdown</caption>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Download PDF Button -->
+    <button id="download-report" class="download-btn">Download Report as PDF</button>
+
+    <footer>
+        <p>&copy; 2024 Financial Reports Inc. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // Fetch and render the charts
+        async function renderCharts() {
+            const response = await fetch('/transactions'); // Adjust the endpoint if needed
+            const transactions = await response.json();
+
+            const incomeData = transactions.filter(t => t.type === 'income').map(t => t.amount);
+            const expenseData = transactions.filter(t => t.type === 'expense').map(t => t.amount);
+
+            // Income Chart (Pie)
+            new Chart(document.getElementById('incomeChart'), {
+                type: 'pie',
+                data: {
+                    labels: ['Salary', 'Bonus'],
+                    datasets: [{
+                        data: incomeData,
+                        backgroundColor: ['#55efc4', '#blue'],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+            // Expense Chart (Bar)
+            new Chart(document.getElementById('expenseChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['School fee', 'Groceries'],
+                    datasets: [{
+                        data: expenseData,
+                        backgroundColor: ['#d63031', '#fdcb6e'],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        // Fetch and populate the tables
+        async function fetchReportData() {
+            try {
+                const response = await fetch('/transactions'); // Adjust endpoint if needed
+                const transactions = await response.json();
+
+                const incomeTableBody = document.querySelector('#income-table tbody');
+                const expenseTableBody = document.querySelector('#expense-table tbody');
+
+                transactions.forEach(transaction => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${transaction.name}</td>
+                        <td>${transaction.amount.toFixed(2)}</td>
+                        <td>${new Date(transaction.date).toLocaleDateString()}</td>
+                    `;
+
+                    if (transaction.type === 'income') {
+                        incomeTableBody.appendChild(row);
+                    } else {
+                        expenseTableBody.appendChild(row);
+                    }
+                });
+            } catch (error) {
+                console.error('Error fetching report data:', error);
+            }
+        }
+
+        // Download the report as a PDF
+        async function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFontSize(16);
+            doc.setFont('Helvetica', 'bold');
+            doc.text('Financial Report', 14, 20);
+            doc.setFontSize(12);
+            doc.setFont('Helvetica', 'normal');
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
+            doc.text(`Generated at: ${new Date().toLocaleTimeString()}`, 14, 36);
+
+            // Add space before the table
+            doc.text('', 14, 46);
+
+            // Set up table headers
+            const headers = [["Name", "Amount", "Date"]];
+            const incomeData = [];
+            const expenseData = [];
+
+            // Fetch income and expense rows separately
+            Array.from(document.querySelectorAll('#income-table tbody tr')).forEach(row => {
+                const cells = Array.from(row.cells);
+                incomeData.push([cells[0].innerText, cells[1].innerText, cells[2].innerText]);
+            });
+
+            Array.from(document.querySelectorAll('#expense-table tbody tr')).forEach(row => {
+                const cells = Array.from(row.cells);
+                expenseData.push([cells[0].innerText, cells[1].innerText, cells[2].innerText]);
+            });
+
+            // Draw income and expense tables separately
+            doc.autoTable({
+                head: [['Income Table']],
+                body: headers.concat(incomeData),
+                startY: 50,
+                theme: 'grid',
+            });
+
+            doc.autoTable({
+                head: [['Expense Table']],
+                body: headers.concat(expenseData),
+                startY: doc.lastAutoTable.finalY + 20,
+                theme: 'grid',
+            });
+
+            // Save the PDF
+            doc.save('financial_report.pdf');
+        }
+
+        document.getElementById('download-report').addEventListener('click', downloadPDF);
+        window.onload = () => {
+            fetchReportData();
+            renderCharts();
+        };
+    </script>
+
+</body>
+</html>
